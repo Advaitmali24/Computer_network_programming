@@ -1,137 +1,79 @@
 #include <iostream>
-#include <vector>
-#include <climits>
-#include <iomanip>
+#include <string>
 using namespace std;
 
 int main()
 {
-    int n, m;
+    string code;
+    cout << "Enter received Hamming code: ";
+    cin >> code;
 
-    cout << "Enter number of routers: ";
-    cin >> n;
+    string receivedCode = code;   // Store original received codeword
 
-    cout << "Enter number of connections: ";
-    cin >> m;
+    int n = code.length();
 
-    vector<vector<int>> cost(n, vector<int>(n, INT_MAX));
-
-    for (int i = 0; i < n; i++)
-        cost[i][i] = 0;
-
-    cout << "Enter connections (router1 router2 cost):\n";
-
-    for (int i = 0; i < m; i++)
+    // Find number of parity bits
+    int r = 0;
+    while ((1 << r) < (n + 1))
     {
-        char u, v;
-        int c;
-
-        cin >> u >> v >> c;
-
-        int a = u - 'A';
-        int b = v - 'A';
-
-        cost[a][b] = c;
-        cost[b][a] = c;
+        r++;
     }
 
-    char source, destination;
+    int errorPosition = 0;
 
-    cout << "Enter source router (A, B, C...): ";
-    cin >> source;
-
-    cout << "Enter destination router (A, B, C...): ";
-    cin >> destination;
-
-    int s = source - 'A';
-    int dest = destination - 'A';
-
-    vector<int> d(n, INT_MAX);
-    vector<int> parent(n, -1);
-    vector<bool> visited(n, false);
-
-    d[s] = 0;
-
-    // Dijkstra's algorithm
-    for (int i = 0; i < n; i++)
+    // Parity checking
+    for (int i = 0; i < r; i++)
     {
-        int u = -1;
+        int parityPosition = (1 << i);
+        int count = 0;
 
-        for (int j = 0; j < n; j++)
+        for (int j = 1; j <= n; j++)
         {
-            if (!visited[j] &&
-                (u == -1 || d[j] < d[u]))
-                u = j;
-        }
-
-        if (u == -1 || d[u] == INT_MAX)
-            break;
-
-        visited[u] = true;
-
-        for (int v = 0; v < n; v++)
-        {
-            if (!visited[v] &&
-                cost[u][v] != INT_MAX &&
-                d[u] + cost[u][v] < d[v])
+            if (j & parityPosition)
             {
-                d[v] = d[u] + cost[u][v];
-                parent[v] = u;
+                if (code[n - j] == '1')
+                    count++;
             }
         }
+
+        if (count % 2 != 0)
+            errorPosition += parityPosition;
     }
 
-    cout << "\n========================================\n";
-    cout << "         SHORTEST PATH DETAILS\n";
-    cout << "========================================\n";
+    cout << "\nReceived codeword: " << receivedCode << endl;
 
-    if (d[dest] == INT_MAX)
+    if (errorPosition == 0)
     {
-        cout << "No path exists from "
-             << source << " to " << destination << ".\n";
+        cout << "No error detected." << endl;
     }
     else
     {
-        vector<int> path;
+        cout << "Error at position: " << errorPosition << endl;
 
-        for (int v = dest; v != -1; v = parent[v])
-            path.push_back(v);
+        // Correct the error
+        int index = n - errorPosition;
 
-        cout << "Shortest path: ";
-
-        for (int i = path.size() - 1; i >= 0; i--)
-        {
-            cout << char('A' + path[i]);
-
-            if (i > 0)
-                cout << " -> ";
-        }
-
-        cout << "\nMinimum cost: " << d[dest] << endl;
-    }
-
-    cout << "\n========================================\n";
-    cout << "       SHORTEST DISTANCE TABLE\n";
-    cout << "========================================\n";
-
-    cout << left << setw(15) << "Source Node"
-         << setw(15) << "Destination"
-         << "Shortest Distance\n";
-
-    cout << "----------------------------------------\n";
-
-    for (int i = 0; i < n; i++)
-    {
-        cout << left << setw(15) << source
-             << setw(15) << char('A' + i);
-
-        if (d[i] == INT_MAX)
-            cout << "Infinity";
+        if (code[index] == '0')
+            code[index] = '1';
         else
-            cout << d[i];
+            code[index] = '0';
 
-        cout << endl;
+        cout << "Corrected codeword: " << code << endl;
     }
+
+    // Extract original data bits
+    cout << "Original data bits: ";
+
+    for (int j = 1; j <= n; j++)
+    {
+        // Skip parity positions: 1, 2, 4, 8, ...
+        if ((j & (j - 1)) != 0)
+        {
+            cout << code[n - j];
+        }
+    }
+
+    cout << endl;
 
     return 0;
 }
